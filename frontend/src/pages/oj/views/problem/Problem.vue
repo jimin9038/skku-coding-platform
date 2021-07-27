@@ -99,6 +99,11 @@
         </b-nav-item>
         <b-nav-item>
           <b-button class="btn">
+            Save
+          </b-button>
+        </b-nav-item>
+        <b-nav-item>
+          <b-button class="btn">
             <b-icon icon="play" scale="1.4"/>
             Run
           </b-button>
