@@ -210,6 +210,7 @@ class UserRegisterAPI(APIView):
         data = request.data
         data["username"] = data["username"].lower()
         data["email"] = data["email"].lower()
+
         captcha = Captcha(request)
         if not captcha.check(data["captcha"]):
             return self.error("Invalid captcha")
@@ -221,7 +222,16 @@ class UserRegisterAPI(APIView):
             return self.error("Email already exists")
         if data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu", "khu.ac.kr", "hanyang.ac.kr", "ajou.ac.kr"):
             return self.error("Invalid domain (Use skku.edu or g.skku.edu or khu.ac.kr or hanyang.ac.kr or ajou.ac.kr)")
+        if data["email"].split("@")[1] in ""
+        
         user = User.objects.create(username=data["username"], email=data["email"], major=data["major"])
+        user.school = "SKKU"
+        if data["email"].split("@")[1] == "khu.ac.kr":
+            user.school = "KHU"
+        elif data["email"].split("@")[1] == "hanyang.ac.kr":
+            user.school = "HYU"
+        elif data["email"].split("@")[1] == "ajou.ac.kr":
+            user.school = "AJU"
         user.set_password(data["password"])
         user.has_email_auth = False
         user.email_auth_token = rand_str()

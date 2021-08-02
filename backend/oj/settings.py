@@ -36,6 +36,13 @@ VENDOR_APPS = [
     'django_dramatiq',
     'django_dbconn_retry',
     'drf_yasg',
+    'django.contrib.sites',
+    'goologin.apps.GoologinConfig',
+    # allauth
+    'allauth', 
+    'allauth.account', 
+    'allauth.socialaccount', 
+    'allauth.socialaccount.providers.google', 
 ]
 
 if production_env:
@@ -188,7 +195,14 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-    )
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
+    ),
 }
 
 SWAGGER_SETTINGS = {
@@ -252,3 +266,19 @@ RAVEN_CONFIG = {
 IP_HEADER = "HTTP_X_REAL_IP"
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50242880
+
+AUTHENTICATION_BACKENDS = ( 
+    # Needed to login by username in Django admin, regardless of 'allauth' 
+    'django.contrib.auth.backends.ModelBackend', 
+    # 'allauth' specific authentication methods, such as login by email 
+    'allauth.account.auth_backends.AuthenticationBackend', 
+) 
+
+REST_USE_JWT = True
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
