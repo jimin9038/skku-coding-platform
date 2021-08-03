@@ -21,11 +21,26 @@
           <b-spinner v-if="btnLoginLoading" small></b-spinner> Sign In
         </b-button>
       </b-container>
-      </b-form>
-      <div class="modal-low mt-5 font-bold">
-        <a v-if="website.allow_register" @click.stop="handleBtnClick('register')" style="float:left;">Register now</a>
-        <a @click.stop="handleBtnClick('ApplyResetPassword')" style="float: right;">Forgot Password</a>
-      </div>
+    </b-form>
+    <div class="google-login">
+      <GoogleLogin
+        class="google-login-button"
+        :params="params"
+        :onSuccess="googleLoginSuccess"
+        :onFailure="googleLoginFail"
+      >
+        <span class="google-login-img">
+          <img src="@/assets/g-logo.png" style="width:20px; height:auto;" alt=""/>
+        </span>
+        <span class="google-login-text">
+          Google로 계속하기
+        </span>
+      </GoogleLogin>
+    </div>
+    <div class="modal-low mt-5 font-bold">
+      <a v-if="website.allow_register" @click.stop="handleBtnClick('register')" style="float:left;">Register now</a>
+      <a @click.stop="handleBtnClick('ApplyResetPassword')" style="float: right;">Forgot Password</a>
+    </div>
   </div>
 </template>
 
@@ -33,6 +48,7 @@
 import { mapGetters, mapActions } from 'vuex'
 import api from '@oj/api'
 import { FormMixin } from '@oj/components/mixins'
+import { GoogleLogin } from 'vue-google-login'
 
 export default {
   mixins: [FormMixin],
@@ -42,8 +58,14 @@ export default {
       formLogin: {
         username: '',
         password: ''
+      },
+      params: {
+        client_id: '53826768076-36libfj7ft2vuh9mu2i78fj6d3t2d6mg.apps.googleusercontent.com'
       }
     }
+  },
+  components: {
+    GoogleLogin
   },
   methods: {
     ...mapActions(['changeModalStatus', 'getProfile']),
@@ -65,6 +87,12 @@ export default {
       } catch (err) {
         this.btnLoginLoading = false
       }
+    },
+    googleLoginSuccess (googleUser) {
+      console.log(googleUser)
+    },
+    googleLoginFail () {
+      console.log('fail')
     }
   },
   computed: {
@@ -133,5 +161,23 @@ export default {
   }
   .font-bold {
     font-family: manrope_bold;
+  }
+  .google-login {
+    margin-left:10px;
+  }
+  .google-login-button {
+    width:280px;
+    height:40px;
+    background:#FFFFFF;
+    margin:10px 25px 0 25px;
+    border-radius:4px;
+    border:thin solid #808080;
+  }
+  .google-login-img {
+    margin-right:10px;
+  }
+  .google-login-text {
+    font-size:15px;
+    font-weight:600;
   }
 </style>

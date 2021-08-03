@@ -9545,6 +9545,11 @@ vue-functional-data-merge@^3.1.0:
   resolved "https://registry.yarnpkg.com/vue-functional-data-merge/-/vue-functional-data-merge-3.1.0.tgz#08a7797583b7f35680587f8a1d51d729aa1dc657"
   integrity sha512-leT4kdJVQyeZNY1kmnS1xiUlQ9z1B/kdBFCILIjYYQDqZgLqCLa0UhjSSeRX6c3mUe6U5qYeM8LrEqkHJ1B4LA==
 
+vue-google-login@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/vue-google-login/-/vue-google-login-2.0.5.tgz#228267444a4a7cfa175b345fe146042d1c3e74ac"
+  integrity sha512-C+N8l+otSOiTDQic35bV8Qt/mq9KWGDX35utbZjcD37hGwMXGabW7GetB3cF56r2LfsSiGAnWwPGK2T2V1gZdA==
+
 vue-highlight-component@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/vue-highlight-component/-/vue-highlight-component-1.0.0.tgz#c1f1d8d0ff41f9bc3b3163d46b25805b1e288541"
