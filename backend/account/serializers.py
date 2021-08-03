@@ -15,6 +15,10 @@ class UsernameOrEmailCheckSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
 
 
+class GoogleAuthSerializer(serializers.Serializer):
+    access_token = serializers.CharField()
+
+
 class UserRegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=32)
     password = serializers.CharField(min_length=6)

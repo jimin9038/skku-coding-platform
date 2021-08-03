@@ -1,5 +1,6 @@
 import os
 import re
+import requests
 from datetime import timedelta
 
 from django.conf import settings
@@ -11,6 +12,9 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.parsers import MultiPartParser
+from json.decoder import JSONDecodeError
+from django.http import JsonResponse
+from rest_framework import status
 
 from options.options import SysOptions
 from utils.api import APIView, validate_serializer
@@ -19,7 +23,7 @@ from utils.shortcuts import rand_str
 from ..decorators import login_required
 from ..models import User, UserProfile
 from ..serializers import (ApplyResetPasswordSerializer, ResetPasswordSerializer,
-                           UserChangePasswordSerializer, UserLoginSerializer,
+                           UserChangePasswordSerializer, UserLoginSerializer, GoogleAuthSerializer,
                            UserRegisterSerializer, EmailAuthSerializer, UsernameOrEmailCheckSerializer,
                            UserChangeEmailSerializer)
 from ..serializers import (UserProfileSerializer,
@@ -192,9 +196,33 @@ class UsernameOrEmailCheck(APIView):
         if data.get("email"):
             if User.objects.filter(email=data["email"].lower()).exists():
                 result["email"] = 1
-            elif data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu", "khu.ac.kr", "hanyang.ac.kr", "ajou.ac.kr"):
+            elif data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu"):
                 result["email"] = 2
         return self.success(result)
+
+
+class GoogleAuthAPI(APIView):
+    @swagger_auto_schema(request_body=GoogleAuthSerializer)
+    @validate_serializer(GoogleAuthSerializer)
+    def post(self, request):
+        data = request.data
+        access_token = data["access_token"]
+        email_req = requests.get(f"https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={access_token}")
+        email_req_status = email_req.status_code
+
+        if email_req_status != 200:
+            return self.error("Failed to get email(400 BAD REQUEST)")
+        email_req_json = email_req.json()
+        email = email_req_json.get('email')
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return self.error("User does not exist")
+        if user.has_email_auth == True:
+            return self.success(email) 
+        else:
+            return self.error("User needs email authorization")
 
 
 class UserRegisterAPI(APIView):
@@ -205,7 +233,7 @@ class UserRegisterAPI(APIView):
         User register api
         """
         if not SysOptions.allow_register:
-            return self.error("Register function has been disabled by admin")
+            return self.error("Register function has been disabled by admin")         
 
         data = request.data
         data["username"] = data["username"].lower()
@@ -216,27 +244,17 @@ class UserRegisterAPI(APIView):
             return self.error("Invalid captcha")
         if User.objects.filter(username=data["username"]).exists():
             return self.error("Username already exists")
-        if not re.match(r"^20[0-9]{8}$", data["username"]):
-            return self.error("Not student ID")
+        if data["email"].split("@")[1] in ["g.skku.edu", "skku.edu"]:
+            if not re.match(r"^20[0-9]{8}$", data["username"]):
+                return self.error("Not student ID")
         if User.objects.filter(email=data["email"]).exists():
             return self.error("Email already exists")
-        if data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu", "khu.ac.kr", "hanyang.ac.kr", "ajou.ac.kr"):
-            return self.error("Invalid domain (Use skku.edu or g.skku.edu or khu.ac.kr or hanyang.ac.kr or ajou.ac.kr)")
-        if data["email"].split("@")[1] in ""
         
         user = User.objects.create(username=data["username"], email=data["email"], major=data["major"])
-        user.school = "SKKU"
-        if data["email"].split("@")[1] == "khu.ac.kr":
-            user.school = "KHU"
-        elif data["email"].split("@")[1] == "hanyang.ac.kr":
-            user.school = "HYU"
-        elif data["email"].split("@")[1] == "ajou.ac.kr":
-            user.school = "AJU"
-        user.set_password(data["password"])
+        user.school = data["email"].split("@")[1].split(".")[0]
         user.has_email_auth = False
         user.email_auth_token = rand_str()
         user.save()
-
         UserProfile.objects.create(user=user)
 
         render_data = {
