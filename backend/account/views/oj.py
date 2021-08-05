@@ -251,7 +251,7 @@ class UserRegisterAPI(APIView):
             return self.error("Email already exists")
         
         user = User.objects.create(username=data["username"], email=data["email"], major=data["major"])
-        user.school = data["email"].split("@")[1].split(".")[0]
+        user.school = data["email"].split("@")[1].split(".")[0].upper();
         user.has_email_auth = False
         user.email_auth_token = rand_str()
         user.save()
@@ -305,8 +305,8 @@ class UserChangeEmailAPI(APIView):
         data["new_email"] = data["new_email"].lower()
         if User.objects.filter(email=data["new_email"]).exists():
             return self.error("The email is owned by other account")
-        if data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu", "khu.ac.kr", "hanyang.ac.kr", "ajou.ac.kr"):
-            return self.error("Invalid domain (Use skku.edu or g.skku.edu or khu.ac.kr or hanyang.ac.kr or ajou.ac.kr)")
+        if data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu"):
+            return self.error("Invalid domain")
         user.email = data["new_email"]
         user.save()
         return self.success("Succeeded")

@@ -38,7 +38,6 @@ VENDOR_APPS = [
     'django_dbconn_retry',
     'drf_yasg',
     'django.contrib.sites',
-    'goologin.apps.GoologinConfig',
     # dj-rest-auth
     'dj_rest_auth',
     'dj_rest_auth.registration',
