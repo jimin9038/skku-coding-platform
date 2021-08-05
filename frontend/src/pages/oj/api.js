@@ -47,6 +47,13 @@ export default {
       data
     })
   },
+  googleAuth (accessToken) {
+    return ajax('google_auth', 'post', {
+      data: {
+        access_token: accessToken
+      }
+    })
+  },
   logout () {
     return ajax('logout', 'get')
   },
