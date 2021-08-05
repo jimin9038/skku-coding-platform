@@ -33,11 +33,15 @@ VENDOR_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'django_dramatiq',
     'django_dbconn_retry',
     'drf_yasg',
     'django.contrib.sites',
     'goologin.apps.GoologinConfig',
+    # dj-rest-auth
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
     # allauth
     'allauth', 
     'allauth.account', 

@@ -5,10 +5,13 @@ coreapi==2.3.3
 coreschema==0.0.4
 coverage==5.4
 Django==2.2.24
+django-allauth==0.45.0
 django-dbconn-retry==0.1.5
 django-dramatiq==0.9.1
 django-redis==4.12.1
 djangorestframework==3.12.2
+djangorestframework-simplejwt==3.10.0.0
+dj-rest-auth==2.1.10
 dramatiq==1.10.0
 drf-yasg==1.20.0
 entrypoints==0.3
