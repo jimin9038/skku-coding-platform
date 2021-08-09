@@ -22,8 +22,7 @@ from utils.captcha import Captcha
 from utils.shortcuts import rand_str
 from ..decorators import login_required
 from ..models import User, UserProfile
-from ..serializers import (ApplyResetPasswordSerializer, ResetPasswordSerializer,
-                           UserChangePasswordSerializer, UserLoginSerializer, GoogleAuthSerializer,
+from ..serializers import (UserLoginSerializer, GoogleAuthSerializer,
                            UserRegisterSerializer, EmailAuthSerializer, UsernameOrEmailCheckSerializer,
                            UserChangeEmailSerializer)
 from ..serializers import (UserProfileSerializer,
@@ -156,7 +155,7 @@ class UserLoginAPI(APIView):
         User login api
         """
         data = request.data
-        user = auth.authenticate(username=data["username"], password=data["password"])
+        user = auth.authenticate(username=data["username"])
         # None is returned if username or password is wrong
         if not user:
             return self.error("Invalid username or password")
@@ -286,108 +285,5 @@ class EmailAuthAPI(APIView):
             return self.error("Token does not exist")
         user.email_auth_token = None
         user.has_email_auth = True
-        user.save()
-        return self.success("Succeeded")
-
-
-class UserChangeEmailAPI(APIView):
-    @swagger_auto_schema(
-        request_body=UserChangeEmailSerializer,
-        operation_description="Change user email",
-    )
-    @validate_serializer(UserChangeEmailSerializer)
-    @login_required
-    def post(self, request):
-        data = request.data
-        user = auth.authenticate(username=request.user.username, password=data["password"])
-        if not user:
-            return self.error("Wrong password")
-        data["new_email"] = data["new_email"].lower()
-        if User.objects.filter(email=data["new_email"]).exists():
-            return self.error("The email is owned by other account")
-        if data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu"):
-            return self.error("Invalid domain")
-        user.email = data["new_email"]
-        user.save()
-        return self.success("Succeeded")
-
-
-class UserChangePasswordAPI(APIView):
-    @swagger_auto_schema(
-        request_body=UserChangePasswordSerializer,
-        operation_description="Change user password",
-    )
-    @validate_serializer(UserChangePasswordSerializer)
-    @login_required
-    def post(self, request):
-        """
-        User change password api
-        """
-        data = request.data
-        username = request.user.username
-        user = auth.authenticate(username=username, password=data["old_password"])
-        if not user:
-            return self.error("Invalid old password")
-        user.set_password(data["new_password"])
-        user.save()
-        return self.success("Succeeded")
-
-
-class ApplyResetPasswordAPI(APIView):
-    @swagger_auto_schema(
-        request_body=ApplyResetPasswordSerializer,
-        operation_description="Send link to email to reset password",
-    )
-    @validate_serializer(ApplyResetPasswordSerializer)
-    def post(self, request):
-        if request.user.is_authenticated:
-            return self.error("You have already logged in, are you kidding me? ")
-        data = request.data
-        captcha = Captcha(request)
-        if not captcha.check(data["captcha"]):
-            return self.error("Invalid captcha")
-        try:
-            user = User.objects.get(email__iexact=data["email"])
-        except User.DoesNotExist:
-            return self.error("User does not exist")
-        if user.reset_password_token_expire_time and 0 < int(
-                (user.reset_password_token_expire_time - now()).total_seconds()) < 20 * 60:
-            return self.error("You can only reset password once per 20 minutes")
-        user.reset_password_token = rand_str()
-        user.reset_password_token_expire_time = now() + timedelta(minutes=20)
-        user.save()
-        render_data = {
-            "username": user.username,
-            "website_name": SysOptions.website_name,
-            "link": f"{SysOptions.website_base_url}/reset-password/{user.reset_password_token}"
-        }
-        email_html = render_to_string("reset_password_email.html", render_data)
-        send_email_async.send(from_name=SysOptions.website_name_shortcut,
-                              to_email=user.email,
-                              to_name=user.username,
-                              subject="Reset your password",
-                              content=email_html)
-        return self.success("Succeeded")
-
-
-class ResetPasswordAPI(APIView):
-    @swagger_auto_schema(
-        request_body=ResetPasswordSerializer,
-        operation_description="Get token from email and set new password",
-    )
-    @validate_serializer(ResetPasswordSerializer)
-    def post(self, request):
-        data = request.data
-        captcha = Captcha(request)
-        if not captcha.check(data["captcha"]):
-            return self.error("Invalid captcha")
-        try:
-            user = User.objects.get(reset_password_token=data["token"])
-        except User.DoesNotExist:
-            return self.error("Token does not exist")
-        if user.reset_password_token_expire_time < now():
-            return self.error("Token has expired")
-        user.reset_password_token = None
-        user.set_password(data["password"])
         user.save()
         return self.success("Succeeded")

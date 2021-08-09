@@ -7,7 +7,6 @@ from .models import AdminType, ProblemPermission, User, UserProfile
 
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
-    password = serializers.CharField()
 
 
 class UsernameOrEmailCheckSerializer(serializers.Serializer):
@@ -30,22 +29,11 @@ class EmailAuthSerializer(serializers.Serializer):
     token = serializers.CharField()
 
 
-class UserChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField()
-    new_password = serializers.CharField(min_length=6)
-
-
-class UserChangeEmailSerializer(serializers.Serializer):
-    password = serializers.CharField()
-    new_email = serializers.EmailField(max_length=64)
-
-
 class GenerateUserSerializer(serializers.Serializer):
     prefix = serializers.CharField(max_length=16, allow_blank=True)
     suffix = serializers.CharField(max_length=16, allow_blank=True)
     number_from = serializers.IntegerField()
     number_to = serializers.IntegerField()
-    password_length = serializers.IntegerField(max_value=16, default=8)
 
 
 class ImportUserSeralizer(serializers.Serializer):
@@ -108,17 +96,6 @@ class EditUserProfileSerializer(serializers.Serializer):
     real_name = serializers.CharField(max_length=32, allow_null=True, required=False)
     avatar = serializers.CharField(max_length=256, allow_blank=True, required=False)
     language = serializers.CharField(max_length=32, allow_blank=True, required=False)
-
-
-class ApplyResetPasswordSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    captcha = serializers.CharField()
-
-
-class ResetPasswordSerializer(serializers.Serializer):
-    token = serializers.CharField()
-    password = serializers.CharField(min_length=6)
-    captcha = serializers.CharField()
 
 
 class SSOSerializer(serializers.Serializer):

@@ -102,7 +102,6 @@ def import_users():
             if not created:
                 print("%s already exists, omitted" % user.username)
                 continue
-            user.password = data["password"]
             user.email = data["email"]
             admin_type = admin_type_map[data["admin_type"]]
             user.admin_type = admin_type

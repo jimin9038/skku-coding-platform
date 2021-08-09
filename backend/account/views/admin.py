@@ -36,7 +36,7 @@ class UserAdminAPI(APIView):
         for user_data in data:
             if len(user_data) != 3 or len(user_data[0]) > 32:
                 return self.error(f"Error occurred while processing data '{user_data}'")
-            user_list.append(User(username=user_data[0], password=make_password(user_data[1]), email=user_data[2]))
+            user_list.append(User(username=user_data[0], email=user_data[2]))
 
         try:
             with transaction.atomic():
@@ -82,9 +82,6 @@ class UserAdminAPI(APIView):
             user.problem_permission = ProblemPermission.ALL
         else:
             user.problem_permission = ProblemPermission.NONE
-
-        if data["password"]:
-            user.set_password(data["password"])
 
         user.save()
         if pre_username != user.username:
