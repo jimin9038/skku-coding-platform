@@ -8,6 +8,7 @@ from django.http import FileResponse
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+from push_notifications.models import WebPushDevice
 from account.decorators import ensure_created_by
 from account.models import User
 from submission.models import Submission, JudgeStatus
@@ -174,6 +175,10 @@ class ContestAnnouncementAPI(APIView):
         except Contest.DoesNotExist:
             return self.error("Contest does not exist")
         announcement = ContestAnnouncement.objects.create(**data)
+
+        devices = WebPushDevice.objects.all()
+        devices.send_message("New Contest Annoucement is posted!")
+
         return self.success(ContestAnnouncementSerializer(announcement).data)
 
     @swagger_auto_schema(

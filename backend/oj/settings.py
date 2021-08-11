@@ -36,6 +36,7 @@ VENDOR_APPS = [
     'django_dramatiq',
     'django_dbconn_retry',
     'drf_yasg',
+    'push_notifications'
 ]
 
 if production_env:
@@ -252,3 +253,9 @@ RAVEN_CONFIG = {
 IP_HEADER = "HTTP_X_REAL_IP"
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50242880
+
+PUSH_NOTIFICATIONS_SETTINGS = {
+    "WP_PRIVATE_KEY": os.path.join(DATA_DIR, "config", "private_key.pem"),
+    "WP_CLAIMS": {'sub': "mailto: development@skku.edu"},
+    "UPDATE_ON_DUPLICATE_REG_ID": True
+}
