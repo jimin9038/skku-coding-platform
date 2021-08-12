@@ -1,6 +1,7 @@
 const path = require('path')
 
 module.exports = {
+  lintOnSave: false,
   publicPath: process.env.NODE_ENV === 'production'
     ? '/__STATIC_CDN_HOST__/'
     : '/',
@@ -47,5 +48,11 @@ module.exports = {
       ],
       cacheFilePath: path.resolve(__dirname, './public')
     }
-  }
+  },
+  pwa: {
+    workboxPluginMode: 'InjectManifest',
+    workboxOptions: {
+      swSrc: './public/sw.js'
+    }
+  },
 }
