@@ -1,5 +1,6 @@
 import os
 import re
+import requests
 from datetime import timedelta
 
 from django.conf import settings
@@ -195,6 +196,28 @@ class UsernameOrEmailCheck(APIView):
             elif data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu"):
                 result["email"] = 2
         return self.success(result)
+
+
+class GoogleAuthAPI(APIView):
+    def post(self, request):
+        data = request.data
+        access_token = data["access_token"]
+        email_req = requests.get(f"https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={access_token}")
+        email_req_status = email_req.status_code
+
+        if email_req_status != 200:
+            return self.error("Failed to get email(400 BAD REQUEST)")
+        email_req_json = email_req.json()
+        email = email_req_json.get('email')
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return self.error("User does not exist")
+        if user.has_email_auth == True:
+            return self.success(email)
+        else:
+            return self.error("User needs email authorization")
 
 
 class UserRegisterAPI(APIView):

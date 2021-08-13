@@ -9,23 +9,24 @@
         <h4>Coding Platform</h4>
       </div>
     </div>
-    <b-form @on-enter="handleLogin" ref="formLogin" :model="formLogin" class="font-bold">
-      <b-container fluid="xl">
-        <b-row class="mb-4">
-          <b-form-input v-model="formLogin.username" placeholder="Student ID" @keydown.enter.native="handleLogin" />
-        </b-row>
-        <b-row class="mb-4">
-          <b-form-input type="password" v-model="formLogin.password" placeholder="Password" @keydown.enter.native="handleLogin" />
-        </b-row>
-        <b-button data-loading-text="a" class="sign-btn" @click="handleLogin" variant="outline">
-          <b-spinner v-if="btnLoginLoading" small></b-spinner> Sign In
-        </b-button>
-      </b-container>
-      </b-form>
-      <div class="modal-low mt-5 font-bold">
-        <a v-if="website.allow_register" @click.stop="handleBtnClick('register')" style="float:left;">Register now</a>
-        <a @click.stop="handleBtnClick('ApplyResetPassword')" style="float: right;">Forgot Password</a>
-      </div>
+    <div class="google-login">
+      <GoogleLogin
+        class="google-login-button"
+        :params="params"
+        :onSuccess="googleLoginSuccess"
+        :onFailure="googleLoginFail"
+      >
+        <span class="google-login-img">
+          <img src="@/assets/g-logo.png"
+            style="width:25px; height:auto; margin-bottom:3px;"
+            alt="google login"
+          />
+        </span>
+        <span class="google-login-text">
+          Sign in with Google
+        </span>
+      </GoogleLogin>
+    </div>
   </div>
 </template>
 
@@ -33,7 +34,7 @@
 import { mapGetters, mapActions } from 'vuex'
 import api from '@oj/api'
 import { FormMixin } from '@oj/components/mixins'
-
+import { GoogleLogin } from 'vue-google-login'
 export default {
   mixins: [FormMixin],
   data () {
@@ -42,8 +43,14 @@ export default {
       formLogin: {
         username: '',
         password: ''
+      },
+      params: {
+        client_id: '53826768076-ed178knilsprf9d8dkto2l322dgbcgh7.apps.googleusercontent.com'
       }
     }
+  },
+  components: {
+    GoogleLogin
   },
   methods: {
     ...mapActions(['changeModalStatus', 'getProfile']),
@@ -64,6 +71,21 @@ export default {
         this.$success('Welcome back!')
       } catch (err) {
         this.btnLoginLoading = false
+      }
+    },
+    async googleLoginSuccess (googleUser) {
+      const accessToken = googleUser.Zb.access_token
+      try {
+        await api.googleAuth(accessToken)
+        // 구글 로그인 성공
+        this.changeMadalStatus({ visible: false })
+        this.getProfile()
+        this.$success('Welcome!')
+      } catch (err) {
+        // 구글 계정 에러 또는 회원가입 절차 진행
+        if (err.data.data === 'User does not exist') {
+          this.handleBtnClick('register')
+        }
       }
     }
   },
@@ -133,5 +155,20 @@ export default {
   }
   .font-bold {
     font-family: manrope_bold;
+  }
+  .google-login-button {
+    width:300px;
+    height:50px;
+    background:#FFFFFF;
+    margin:0 25px 15px 25px;
+    border-radius:4px;
+    border:thin solid #808080;
+  }
+  .google-login-img {
+    margin-right:10px;
+  }
+  .google-login-text {
+    font-size:18px;
+    font-weight:600;
   }
 </style>
