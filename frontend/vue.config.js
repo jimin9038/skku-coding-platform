@@ -1,7 +1,6 @@
 const path = require('path')
 
 module.exports = {
-  lintOnSave: false,
   publicPath: process.env.NODE_ENV === 'production'
     ? '/__STATIC_CDN_HOST__/'
     : '/',
@@ -28,7 +27,8 @@ module.exports = {
       alias: {
         '@': path.join(__dirname, 'src'),
         '@oj': path.join(__dirname, 'src/pages/oj'),
-        '@admin': path.join(__dirname, 'src/pages/admin')
+        '@admin': path.join(__dirname, 'src/pages/admin'),
+        '@public': path.join(__dirname, 'public')
       }
     }
   },
@@ -54,5 +54,5 @@ module.exports = {
     workboxOptions: {
       swSrc: './public/sw.js'
     }
-  },
+  }
 }
