@@ -9,62 +9,66 @@
     </div>
     <div class="put-in">
       My Lecture
-      <b-button class="put-in-button" variant="white" @click="$emit('hide')">
+      <b-button :v-model="asdf" class="put-in-button" variant="white" @click="lectureGroup()">
         <b-icon icon="chevron-double-left"/>
       </b-button>
+      {{asdf}}
     </div>
     <b-list-group-item to="/">
-      <b-icon
-        icon="journal-text"
-        font-scale="1.25"
-        style="margin-right: 8px"
-      />
-      Dashboard
+      <b-button :pressed.sync="press" class="put-in-button" variant="white">
+        <b-icon :icon="press ? 'chevron-down' : 'chevron-right'"/>
+      </b-button>
+      Dashboard {{press}}
+      {{lecture_term}}  {{lectures}}
     </b-list-group-item>
-    <div v-for="(lecture1,index) in lectures" :key="index">
-      <div v-if="lecture1.registered_year===thisyear">
 
-        <b-collapse id="lecture" role="tab">
-          <b-list-group-item
-            class="list-group-subitem"
-            v-b-toggle.lecture_title
-          >
-          <b-icon icon="caret-down-fill"/>
-          {{lecture1.registered_year}} {{lecture1.semester}}
-          </b-list-group-item>
-        </b-collapse>
+    <div v-for="(term,index) in lecture_term" :key="index" >
+      {{term.semester}}
+      <div v-for="(lecture,index) in lectures" :key="index">
+        {{term.year}} {{lecture.title}} {{lecture.registered_year}} {{term.semester}} {{lecture.semester}}
+        <!-- <div v-if="term.year === lecture.registered_year && term.semester === lecture.semester"> -->
+          {{lecture.course_code}} {{semester_name[lecture.semester]}}
+          <b-collapse id="lecture" role="tab">
+            <b-list-group-item
+              class="list-group-subitem"
+              v-b-toggle.lecture_group
+            >
+              <b-icon :icon="detailsShowing ? 'chevron-down' : 'chevron-right'"/>
+              {{term.year}} {{semester_name[term.semester]}}
+            </b-list-group-item>
+          </b-collapse>
 
-        <b-collapse id="lecture_title" role="tab">
-          <div v-for="(lecture2, index) in lectures.lecture_title" :key="index">
+          <b-collapse id="lecture_group" role="tab">
             <b-list-group-item
               class="list-group-subitem"
               v-b-toggle.inner
             >
-            <b-icon icon="caret-down-fill" />
-            {{lecture_name}}
+              <b-icon icon="caret-down-fill" />
+              {{lecture2.title}}_{{lecture2.course_code}}_{{lecture2.class_number}}
             </b-list-group-item>
-          </div>
-        </b-collapse>
-        <b-collapse id="inner" role="tabpanel">
-          <b-list-group-item
-            to="/lecture/1/dashboard"
-            class="list-group-subitem"
-          >
-            Lecture Dashboard
-          </b-list-group-item>
-          <b-list-group-item
-            to="/lecture/1/assignment"
-            class="list-group-subitem"
-          >
-            Assignments
-          </b-list-group-item>
-          <b-list-group-item
-            to="/lecture/1/qna"
-            class="list-group-subitem"
-          >
-            QnA
-          </b-list-group-item>
-        </b-collapse>
+          </b-collapse>
+
+          <b-collapse id="inner" role="tabpanel">
+            <b-list-group-item
+              to="/lecture/1/dashboard"
+              class="list-group-subitem"
+            >
+              Lecture Dashboard
+            </b-list-group-item>
+            <b-list-group-item
+              to="/lecture/1/assignment"
+              class="list-group-subitem"
+            >
+              Assignments
+            </b-list-group-item>
+            <b-list-group-item
+              to="/lecture/1/qna"
+              class="list-group-subitem"
+            >
+              QnA
+            </b-list-group-item>
+          </b-collapse>
+        <!-- </div> -->
       </div>
 <!--
       <b-collapse id="lecture_title">
@@ -86,7 +90,7 @@
       </div>
 -->
     </div>
-    <b-list-group-item href="#" role="tab" v-b-toggle.general>
+    <b-list-group-item href="#" role="tab" v-b-toggle.lecture_group>
       <b-icon
         icon="grid-fill"
         font-scale="1.25"
@@ -105,32 +109,31 @@ export default {
   data () {
     return {
       currentPath: '',
-      thisyear: 2021,
-      lectures: [{
+      lecture_term: [],
+      press: false,
+      asdf: 'asdf',
+      semester_name: ['Spring', 'Summer', 'Fall', 'Winter'],
+      lectures: [{ 
         id: 1,
-        title: 'Python Programming',
-        course_code: 'GDBEASDF',
-        class_number: 41,
-        registered_year: '2021',
-        semester: 'Spring'
-      },
-      {
-        id: 2,
-        title: '프로그래밍 기초와 실습',
-        course_code: 'GDBEAqwe',
-        class_number: 40,
-        registered_year: '2020',
-        semester: 'Summer'
+        title: '',
+        course_code: '',
+        class_number: 1,
+        created_by: {
+          id: 1,
+          username: '',
+          real_name: ''
+        },
+        registered_year: '',
+        semester: 0
       }],
       lectureNumber: 1
     }
-    // [{ name: 'Python Programming', id: '1' }, { name: 'Intro to Database', id: '2' }, { name: 'Open Source Software Practice', id: '3' }]
   },
-  async mounted () {
-    // this.currentPath = this.$route.path
-    // const res = await api.getCourseList()
-    // const lectures = res.data.data.results
-    // this.lectures = lectures.filter(lecture => lecture.created_by.username === username)
+  mounted () {
+    this.currentPath = this.$route.path
+    this.lectureGroup()
+    // const res = api.getCourseList()
+    // this.lectureNumber = res.data.data.lectureNumber
   },
   computed: {
     ...mapGetters(['user', 'isSuperAdmin', 'hasProblemPermission'])
@@ -138,6 +141,58 @@ export default {
   methods: {
     putMenuInside () {
       this.sideMenuShow = false
+    },
+    lectureGroup () {
+      // const apilectures = res.data.data.results
+      const apilectures = [{ // 여기서 api 불러옴
+        id: 1,
+        title: 'Python Programming',
+        course_code: 'GDBEASDF',
+        class_number: 41,
+        created_by: {
+          id: 1,
+          username: 'minchae',
+          real_name: '고민채'
+        },
+        registered_year: '2021',
+        semester: 0
+      },
+      {
+        id: 2,
+        title: '프로그래밍 기초와 실습',
+        course_code: 'GDBEAPOI',
+        class_number: 40,
+        created_by: {
+          id: 1,
+          username: 'minchae',
+          real_name: '고민채'
+        },
+        registered_year: '2020',
+        semester: 1
+      }]
+      const registerTerm = []
+      this.asdf = 'Change'
+      apilectures.sort((a, b) => { return a.registered_year < b.registered_year })
+      apilectures.sort((a, b) => {
+        if (a.registered_year === b.registered_year) {
+          return a.semester < b.semester
+        } else { return 0 }
+      })
+      apilectures.sort((a, b) => { return a.title < b.title })
+      apilectures.sort((a, b) => {
+        if (a.title === b.title) {
+          return a.class_number < b.class_number
+        } else { return 0 }
+      })
+
+      apilectures.forEach(lecture => {
+        if (!({ year: lecture.registered_year, semester: lecture.semester } in registerTerm)) {
+          registerTerm.push({ year: lecture.registered_year, semester: lecture.semester })
+        }
+      })
+
+      this.lectures = apilectures
+      this.lecture_term = registerTerm
     }
   }
 }
