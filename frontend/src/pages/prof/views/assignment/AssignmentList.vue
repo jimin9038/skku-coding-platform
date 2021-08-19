@@ -27,9 +27,20 @@
                 :fields="problemField"
               >
                 <template #cell(operation)>
-                  <b-icon icon="pencil" aria-hidden="true"></b-icon>
-                  <b-icon icon="box-arrow-in-down" aria-hidden="true"></b-icon>
-                  <b-icon icon="trash" aria-hidden="true"></b-icon>
+                  <div>
+                    <icon-btn
+                      name="Edit"
+                      icon="pencil"
+                    />
+                    <icon-btn
+                      name="Save"
+                      icon="box-arrow-in-down"
+                    />
+                    <icon-btn
+                      name="Delete Contest"
+                      icon="trash"
+                    />
+                  </div>
                 </template>
               </b-table>
               <b-button size="sm" variant="warning" class="mr-2">
@@ -56,9 +67,20 @@
               </b-icon>
             </template>
             <template #cell(operation)>
-              <b-icon icon="pencil" aria-hidden="true"></b-icon>
-              <b-icon icon="box-arrow-in-down" aria-hidden="true"></b-icon>
-              <b-icon icon="trash" aria-hidden="true"></b-icon>
+              <div>
+                <icon-btn
+                  name="Edit"
+                  icon="pencil"
+                />
+                <icon-btn
+                  name="Save"
+                  icon="box-arrow-in-down"
+                />
+                <icon-btn
+                  name="Delete Contest"
+                  icon="trash"
+                />
+              </div>
             </template>
           </b-table>
         </div>
