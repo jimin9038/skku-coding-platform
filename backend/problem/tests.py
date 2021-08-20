@@ -189,7 +189,11 @@ class ProblemAPITest(ProblemCreateTestBase):
         self.assertSuccess(resp)
 
     def get_one_problem(self):
-        resp = self.client.get(self.url + "?id=" + self.problem._id)
+        resp = self.client.get(self.url + "?id=" + self.problem._id, data={"problem_id": "A-110"})
+        self.assertSuccess(resp)
+        self.problem["rule_type"] = "OI"
+        self.problem.save()
+        resp = self.client.get(self.url + "?id=" + self.problem._id, data={"problem_id": "A-110"})
         self.assertSuccess(resp)
 
 

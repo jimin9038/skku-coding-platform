@@ -27,6 +27,20 @@ class ContestAdminAPITest(APITestCase):
         self.assertSuccess(response)
         return response
 
+    def test_create_wrong_contest(self):
+        data = {"title": "test title", "description": "test description",
+                "start_time": timezone.localtime(timezone.now()),
+                "end_time": timezone.localtime(timezone.now()) - timedelta(days=1),
+                "rule_type": ContestRuleType.ACM,
+                "password": "",
+                "allowed_ip_ranges": [],
+                "visible": True, "real_time_rank": True}
+        response = self.client.post(self.url, data=data)
+        self.assertFailed(response)
+        data["end_time"] = timezone.localtime(timezone.now()) + timedelta(days=1)
+        response = self.client.post(self.url, data=data)
+        self.assertSuccess(response)
+
     def test_create_contest_with_invalid_cidr(self):
         self.data["allowed_ip_ranges"] = ["127.0.0"]
         resp = self.client.post(self.url, data=self.data)
@@ -70,14 +84,26 @@ class ContestAPITest(APITestCase):
         response = self.client.get(url + "?limit=10")
         self.assertSuccess(response)
         self.assertEqual(len(response.data["data"]["results"]), 1)
+        response = self.client.get(url, data={"keyword": "test", "rule_type": "null", "status": 1})
+        self.assertSuccess(response)
+        response = self.client.get(url, data={"status": 0})
+        self.assertSuccess(response)
+        response = self.client.get(url, data={"status": -1})
+        self.assertSuccess(response)
 
     def test_get_one_contest(self):
+        resp = self.client.get(self.url, data={"id": -1})
+        self.assertFailed(resp)
+        resp = self.client.get(self.url, data={"id": 11111})
+        self.assertFailed(resp)
         resp = self.client.get(self.url)
         self.assertSuccess(resp)
 
     def test_regular_user_validate_contest_password(self):
         self.create_user("test", "test123")
         url = self.reverse("contest_password_api")
+        resp = self.client.post(url)
+        self.assertFailed(resp)
         resp = self.client.post(url, {"contest_id": self.contest.id, "password": "error_password"})
         self.assertDictEqual(resp.data, {"error": "error", "data": "Wrong password or password expired"})
 
@@ -87,6 +113,10 @@ class ContestAPITest(APITestCase):
     def test_regular_user_access_contest(self):
         self.create_user("test", "test123")
         url = self.reverse("contest_access_api")
+        resp = self.client.get(url)
+        self.assertFailed(resp)
+        resp = self.client.get(url, data={"contest_id": 11111})
+        self.assertFailed(resp)
         resp = self.client.get(url + "?contest_id=" + str(self.contest.id))
         self.assertFalse(resp.data["data"]["access"])
 
@@ -146,5 +176,7 @@ class ContestAnnouncementListAPITest(APITestCase):
 
     def test_get_contest_announcement_list(self):
         contest_id = self.create_contest_announcements()
-        response = self.client.get(self.url, data={"contest_id": contest_id})
+        resp = self.client.get(self.url)
+        self.assertFailed(resp)
+        response = self.client.get(self.url, data={"contest_id": contest_id, "max_id": 1})
         self.assertSuccess(response)

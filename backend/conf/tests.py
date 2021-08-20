@@ -1,3 +1,4 @@
+from datetime import timedelta
 import hashlib
 from unittest import mock
 
@@ -23,6 +24,22 @@ class SMTPConfigTest(APITestCase):
         self.assertTrue("password" not in resp.data)
         return resp
 
+    def create_wrong_smtp_config(self):
+        data = {"server": "", "email": "", "port": 1,
+                "tls": False, "password": ""}
+        resp = self.client.post(self.url, data=data)
+        return resp
+
+    def test_get_smtp_config(self):
+        # do not need to login
+        url = self.reverse("smtp_admin_api")
+        resp = self.client.get(url)
+        self.assertSuccess(resp)
+        self.test_create_smtp_config()
+        url = self.reverse("smtp_admin_api")
+        resp = self.client.get(url)
+        self.assertSuccess(resp)
+
     def test_edit_without_password(self):
         self.test_create_smtp_config()
         data = {"server": "smtp1.test.com", "email": "test2@test.com", "port": 465,
@@ -47,6 +64,11 @@ class SMTPConfigTest(APITestCase):
     @mock.patch("conf.views.send_email")
     def test_test_smtp(self, mocked_send_email):
         url = self.reverse("smtp_test_api")
+        resp = self.client.post(url, data={"email": "test@test.com"})
+        self.assertFailed(resp)
+        self.create_wrong_smtp_config()
+        resp = self.client.post(url, data={"email": "test@test.com"})
+        self.assertFailed(resp)
         self.test_create_smtp_config()
         resp = self.client.post(url, data={"email": "test@test.com"})
         self.assertSuccess(resp)
@@ -96,6 +118,13 @@ class JudgeServerHeartbeatTest(APITestCase):
         server = JudgeServer.objects.first()
         self.assertEqual(server.ip, "127.0.0.1")
 
+    def test_wrong_heartbeat(self):
+        wrong_token = "wrong"
+        wrong_hased_token = hashlib.sha256(wrong_token.encode("utf-8")).hexdigest()
+        header = {"HTTP_X_JUDGE_SERVER_TOKEN": wrong_hased_token, settings.IP_HEADER: "1.2.3.4"}
+        resp = self.client.post(self.url, data=self.data, **header)
+        self.assertFailed(resp)
+
     def test_update_heartbeat(self):
         self.test_new_heartbeat()
         data = self.data
@@ -103,6 +132,15 @@ class JudgeServerHeartbeatTest(APITestCase):
         resp = self.client.post(self.url, data=data, **self.headers)
         self.assertSuccess(resp)
         self.assertEqual(JudgeServer.objects.get(hostname=self.data["hostname"]).judger_version, data["judger_version"])
+
+    def test_abnormal_hearbeat(self):
+        self.test_new_heartbeat()
+        data = self.data
+        data["last_heartbeat"] = timezone.now() - timedelta(seconds=100)
+        resp = self.client.post(self.url, data=data, **self.headers)
+
+        self.assertSuccess(resp)
+        JudgeServer.objects.first()
 
 
 class JudgeServerAPITest(APITestCase):
@@ -128,6 +166,10 @@ class JudgeServerAPITest(APITestCase):
         self.assertSuccess(resp)
         self.assertTrue(JudgeServer.objects.get(id=self.server.id).is_disabled)
 
+    def test_not_disabled_judge_server(self):
+        resp = self.client.put(self.url, data={"is_disabled": False, "id": self.server.id})
+        self.assertSuccess(resp)
+
 
 class LanguageListAPITest(APITestCase):
     def test_get_languages(self):
@@ -144,14 +186,21 @@ class TestCasePruneAPITest(APITestCase):
         resp = self.client.get(self.url)
         self.assertSuccess(resp)
 
+    def test_delete_one_test_case(self):
+        self.client.get(self.url)
+        valid_id = "1"
+        resp = self.client.delete(self.url, data={"id": valid_id})
+        self.assertSuccess(resp)
+
     @mock.patch("conf.views.TestCasePruneAPI.delete_one")
     @mock.patch("conf.views.os.listdir")
     @mock.patch("conf.views.Problem")
     def test_delete_test_case(self, mocked_problem, mocked_listdir, mocked_delete_one):
+        self.client.get(self.url)
         valid_id = "1172980672983b2b49820be3a741b109"
         mocked_problem.return_value = [valid_id, ]
         mocked_listdir.return_value = [valid_id, ".test", "aaa"]
-        resp = self.client.delete(self.url)
+        resp = self.client.delete(self.url, data={"id": valid_id})
         self.assertSuccess(resp)
         mocked_delete_one.assert_called_once_with(valid_id)
 
