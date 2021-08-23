@@ -21,9 +21,15 @@ class PermissionDecoratorTest(APITestCase):
         self.super_admin = User.objects.create(username="super_admin")
         self.request = mock.MagicMock()
         self.request.user.is_authenticated = mock.MagicMock()
+        self.request.user.is_disabled = mock.MagicMock()
+        self.request.user.has_email_auth = mock.MagicMock()
 
     def test_login_required(self):
         self.request.user.is_authenticated.return_value = False
+
+    def test_disabled_account(self):
+        self.request.user.is_authenticated.return_value = True
+        self.request.user.is_disabled.return_value = True
 
     def test_admin_required(self):
         pass
@@ -96,6 +102,17 @@ class UserLoginAPITest(APITestCase):
         user = auth.get_user(self.client)
         self.assertTrue(user.is_authenticated)
 
+    def test_login_and_add_number(self):
+        response = self.client.post(self.login_url,
+                                    data={"username": self.username, "password": self.password})
+        self.assertDictEqual(response.data, {"error": None, "data": "Succeeded"})
+
+        user = auth.get_user(self.client)
+        user.userprofile.add_score(100, 200)
+        user.userprofile.add_submission_number()
+        user.userprofile.add_accepted_problem_number()
+        self.assertTrue(user.is_authenticated)
+
     def test_login_with_correct_info_upper_username(self):
         resp = self.client.post(self.login_url, data={"username": self.username.upper(), "password": self.password})
         self.assertDictEqual(resp.data, {"error": None, "data": "Succeeded"})
@@ -116,6 +133,13 @@ class UserLoginAPITest(APITestCase):
         resp = self.client.post(self.login_url, data={"username": self.username,
                                                       "password": self.password})
         self.assertDictEqual(resp.data, {"error": "error", "data": "Your account has been disabled"})
+
+    def test_user_without_email_auth(self):
+        self.user.has_email_auth = False
+        self.user.save()
+        resp = self.client.post(self.login_url, data={"username": self.username,
+                                                      "password": self.password})
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Your need to authenticate your email"})
 
 
 class CaptchaTest(APITestCase):
@@ -160,7 +184,6 @@ class UserRegisterAPITest(CaptchaTest):
 
     def test_username_already_exists(self):
         self.test_register_with_correct_info()
-
         self.data["captcha"] = self._set_captcha(self.client.session)
         self.data["email"] = "test1@skku.edu"
         response = self.client.post(self.register_url, data=self.data)
@@ -168,11 +191,25 @@ class UserRegisterAPITest(CaptchaTest):
 
     def test_email_already_exists(self):
         self.test_register_with_correct_info()
-
         self.data["captcha"] = self._set_captcha(self.client.session)
         self.data["username"] = "2020111222"
         response = self.client.post(self.register_url, data=self.data)
         self.assertDictEqual(response.data, {"error": "error", "data": "Email already exists"})
+
+    def test_not_student_id(self):
+        self.test_register_with_correct_info()
+        self.data["captcha"] = self._set_captcha(self.client.session)
+        self.data["username"] = "19980331"
+        response = self.client.post(self.register_url, data=self.data)
+        self.assertDictEqual(response.data, {"error": "error", "data": "Not student ID"})
+
+    def test_invalid_domain(self):
+        self.test_register_with_correct_info()
+        self.data["captcha"] = self._set_captcha(self.client.session)
+        self.data["username"] = "2020111223"
+        self.data["email"] = "19980331@gmail.com"
+        response = self.client.post(self.register_url, data=self.data)
+        self.assertDictEqual(response.data, {"error": "error", "data": "Invalid domain (Use skku.edu or g.skku.edu)"})
 
 
 class UserProfileAPITest(APITestCase):
@@ -183,9 +220,21 @@ class UserProfileAPITest(APITestCase):
         resp = self.client.get(self.url)
         self.assertDictEqual(resp.data, {"error": None, "data": None})
 
+    def test_get_profile_without_user(self):
+        self.create_user("2020222000", "test123")
+        data = {"username": "19980331"}
+        resp = self.client.get(self.url, data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "User does not exist"})
+
     def test_get_profile(self):
         self.create_user("2020222000", "test123")
         resp = self.client.get(self.url)
+        self.assertSuccess(resp)
+
+    def test_get_profile_with_username(self):
+        self.create_user("2020222000", "test123")
+        data = {"username": "2020222000"}
+        resp = self.client.get(self.url, data)
         self.assertSuccess(resp)
 
     def test_update_profile(self):
@@ -202,11 +251,12 @@ class UserProfileAPITest(APITestCase):
 @mock.patch("account.views.oj.send_email_async.send")
 class ApplyResetPasswordAPITest(CaptchaTest):
     def setUp(self):
-        self.create_user("2020222000", "test123", login=False)
-        user = User.objects.first()
-        user.email = "test@g.skku.edu"
-        user.save()
+        self.username = self.password = "2020222000"
+        self.user = self.create_user(username=self.username, password=self.password, login=False)
+        self.user.email = "test@g.skku.edu"
+        self.user.save()
         self.url = self.reverse("apply_reset_password_api")
+        self.login_url = self.reverse("user_login_api")
         self.data = {"email": "test@g.skku.edu", "captcha": self._set_captcha(self.client.session)}
 
     def _refresh_captcha(self):
@@ -216,6 +266,13 @@ class ApplyResetPasswordAPITest(CaptchaTest):
         resp = self.client.post(self.url, data=self.data)
         self.assertSuccess(resp)
         send_email_send.assert_called()
+
+    def test_apply_reset_password_with_authentication(self, send_email_send):
+        response = self.client.post(self.login_url,
+                                    data={"username": self.username, "password": self.password})
+        self.assertDictEqual(response.data, {"error": None, "data": "Succeeded"})
+        resp = self.client.post(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "You have already logged in, are you kidding me? "})
 
     def test_apply_reset_password_twice_in_20_mins(self, send_email_send):
         self.test_apply_reset_password()
@@ -227,11 +284,20 @@ class ApplyResetPasswordAPITest(CaptchaTest):
 
     def test_apply_reset_password_again_after_20_mins(self, send_email_send):
         self.test_apply_reset_password()
-        user = User.objects.first()
-        user.reset_password_token_expire_time = now() - timedelta(minutes=21)
-        user.save()
+        self.user.reset_password_token_expire_time = now() - timedelta(minutes=21)
+        self.user.save()
         self._refresh_captcha()
         self.test_apply_reset_password()
+
+    def test_invalid_captcha(self, send_email_send):
+        self.data["captcha"] = "invalid"
+        resp = self.client.post(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Invalid captcha"})
+
+    def test_user_does_not_exist(self, send_email_send):
+        self.data["email"] = "19980331@gmail.com"
+        resp = self.client.post(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "User does not exist"})
 
 
 class ResetPasswordAPITest(CaptchaTest):
@@ -263,6 +329,11 @@ class ResetPasswordAPITest(CaptchaTest):
         resp = self.client.post(self.url, data=self.data)
         self.assertDictEqual(resp.data, {"error": "error", "data": "Token has expired"})
 
+    def test_invalid_captcha(self):
+        self.data["captcha"] = "invalid"
+        resp = self.client.post(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Invalid captcha"})
+
 
 class UserChangeEmailAPITest(APITestCase):
     def setUp(self):
@@ -287,6 +358,11 @@ class UserChangeEmailAPITest(APITestCase):
         resp = self.client.post(self.url, data=self.data)
         self.assertDictEqual(resp.data, {"error": "error", "data": "The email is owned by other account"})
 
+    def test_invalid_domain(self):
+        self.data["new_email"] = "19980331@gmail.com"
+        resp = self.client.post(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Invalid domain (Use skku.edu or g.skku.edu)"})
+
 
 class UserChangePasswordAPITest(APITestCase):
     def setUp(self):
@@ -296,6 +372,7 @@ class UserChangePasswordAPITest(APITestCase):
         self.username = "2020222000"
         self.old_password = "testuserpassword"
         self.new_password = "new_password"
+        self.login_url = self.reverse("user_login_api")
         self.user = self.create_user(username=self.username, password=self.old_password, login=False)
 
         self.data = {"old_password": self.old_password, "new_password": self.new_password}
@@ -304,7 +381,14 @@ class UserChangePasswordAPITest(APITestCase):
         response = self.client.post(self.url, data=self.data)
         self.assertEqual(response.data, {"error": "permission-denied", "data": "Please login first"})
 
-    def test_valid_ola_password(self):
+    def test_disabled_account(self):
+        self.user.is_disabled = True
+        self.user.save()
+        self.assertTrue(self.client.login(username=self.username, password=self.old_password))
+        response = self.client.post(self.url, data=self.data)
+        self.assertEqual(response.data, {"error": "permission-denied", "data": "Your account is disabled"})
+
+    def test_valid_old_password(self):
         self.assertTrue(self.client.login(username=self.username, password=self.old_password))
         response = self.client.post(self.url, data=self.data)
         self.assertEqual(response.data, {"error": None, "data": "Succeeded"})
@@ -326,9 +410,10 @@ class AdminUserTest(APITestCase):
     def setUp(self):
         self.user = self.create_super_admin(login=True)
         self.username = self.password = "2015135790"
+        self.new_username = "2016135790"
         self.regular_user = self.create_user(username=self.username, password=self.password, login=False)
         self.url = self.reverse("user_admin_api")
-        self.data = {"id": self.regular_user.id, "username": self.username, "real_name": "test_name",
+        self.data = {"id": self.regular_user.id, "username": self.new_username, "real_name": "test_name",
                      "email": "example@skku.edu", "major": "Computer Science (컴퓨터공학과)",
                      "admin_type": AdminType.REGULAR_USER, "problem_permission": ProblemPermission.OWN,
                      "is_disabled": False}
@@ -337,17 +422,76 @@ class AdminUserTest(APITestCase):
         response = self.client.get(self.url)
         self.assertSuccess(response)
 
+    def test_user_list_with_id(self):
+        self.data = {"id": self.regular_user.id}
+        response = self.client.get(self.url, data=self.data)
+        self.assertSuccess(response)
+
+    def test_get_user_fail(self):
+        self.data = {"id": "19980331"}
+        resp = self.client.get(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "User does not exist"})
+
+    def test_get_user(self):
+        self.data = {"keyword": self.regular_user.username}
+        response = self.client.get(self.url, data=self.data)
+        self.assertSuccess(response)
+
     def test_edit_user_successfully(self):
         response = self.client.put(self.url, data=self.data)
         self.assertSuccess(response)
         resp_data = response.data["data"]
-        self.assertEqual(resp_data["username"], self.username)
+        self.assertEqual(resp_data["username"], self.new_username)
         self.assertEqual(resp_data["email"], "example@skku.edu")
         self.assertEqual(resp_data["major"], "Computer Science (컴퓨터공학과)")
         self.assertEqual(resp_data["is_disabled"], False)
         self.assertEqual(resp_data["problem_permission"], ProblemPermission.NONE)
 
-        self.assertTrue(self.regular_user.check_password("2015135790"))
+    def test_edit_user_does_not_exist(self):
+        self.data["id"] = "19980331"
+        resp = self.client.put(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "User does not exist"})
+
+    def test_edit_user_duplicated_username(self):
+        self.create_user(username=self.new_username, password=self.password, login=False)
+        resp = self.client.put(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Username already exists"})
+
+    def test_edit_user_duplicated_email(self):
+        self.duplicated_user = self.create_user(username="2015135791", password=self.password, login=False)
+        self.duplicated_user.email = "example@skku.edu"
+        self.duplicated_user.save()
+        self.user.login = True
+        self.user.save()
+        resp = self.client.put(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Email already exists"})
+
+    def test_edit_user_admin_successfully(self):
+        self.data["admin_type"] = AdminType.ADMIN
+        response = self.client.put(self.url, data=self.data)
+        self.assertSuccess(response)
+        resp_data = response.data["data"]
+        self.assertEqual(resp_data["username"], self.new_username)
+        self.assertEqual(resp_data["email"], "example@skku.edu")
+        self.assertEqual(resp_data["major"], "Computer Science (컴퓨터공학과)")
+        self.assertEqual(resp_data["is_disabled"], False)
+        self.assertEqual(resp_data["problem_permission"], ProblemPermission.OWN)
+
+    def test_edit_user_super_admin_successfully(self):
+        self.data["admin_type"] = AdminType.SUPER_ADMIN
+        response = self.client.put(self.url, data=self.data)
+        self.assertSuccess(response)
+        resp_data = response.data["data"]
+        self.assertEqual(resp_data["username"], self.new_username)
+        self.assertEqual(resp_data["email"], "example@skku.edu")
+        self.assertEqual(resp_data["major"], "Computer Science (컴퓨터공학과)")
+        self.assertEqual(resp_data["is_disabled"], False)
+        self.assertEqual(resp_data["problem_permission"], ProblemPermission.ALL)
+
+    def test_admin_role_required_middleware(self):
+        self.duplicated_user = self.create_user(username="2015135791", password=self.password, login=True)
+        resp = self.client.put(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "login-required", "data": "Please login in first"})
 
     def test_edit_user_password(self):
         data = self.data
@@ -368,6 +512,13 @@ class AdminUserTest(APITestCase):
         # successfully created 2 users
         self.assertEqual(User.objects.all().count(), 4)
 
+    def test_import_users_failed(self):
+        data = {"users": [["user1", "pass1", "eami1@skku.edu"],
+                          ["user2", "eamil3@skku.edu"]]
+                }
+        resp = self.client.post(self.url, data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Error occurred while processing data '['user2', 'eamil3@skku.edu']'"})
+
     def test_import_duplicate_user(self):
         data = {"users": [["user1", "pass1", "eami1@skku.edu"],
                           ["user1", "pass1", "eami1@skku.edu"]]
@@ -385,6 +536,16 @@ class AdminUserTest(APITestCase):
         self.assertSuccess(resp)
         self.assertEqual(User.objects.all().count(), 2)
 
+    def test_delete_users_without_id(self):
+        self.test_import_users()
+        resp = self.client.delete(self.url)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Invalid Parameter, id is required"})
+
+    def test_delete_users_fail(self):
+        self.test_import_users()
+        resp = self.client.delete(self.url + "?id=" + str(self.user.id))
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Current user can not be deleted"})
+
 
 class GenerateUserAPITest(APITestCase):
     def setUp(self):
@@ -396,6 +557,15 @@ class GenerateUserAPITest(APITestCase):
             "default_email": "test@test.com",
             "password_length": 8
         }
+        self.password = "teset123"
+
+    @mock.patch("account.views.admin.xlsxwriter.Workbook")
+    def test_download_users_success(self, mock_workbook):
+        resp = self.client.post(self.url, data=self.data)
+        self.assertSuccess(resp)
+        mock_workbook.assert_called()
+        # resp = self.client.get(self.url, data={mock_workbook.get_id()})
+        # self.assertEqual(resp.data["data"], f"U  {mock_workbook.get_id()}")
 
     def test_error_case(self):
         data = deepcopy(self.data)
@@ -414,3 +584,73 @@ class GenerateUserAPITest(APITestCase):
         resp = self.client.post(self.url, data=self.data)
         self.assertSuccess(resp)
         mock_workbook.assert_called()
+
+    def test_generate_user_fail(self):
+        self.duplicated_user = self.create_user(username="pre101suf", password=self.password, login=False)
+        resp = self.client.post(self.url, data=self.data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "DETAIL:  Key (username)=(pre101suf) already exists."})
+
+
+class UserSettingAPITest(APITestCase):
+    def setUp(self):
+        self.url = self.reverse("user_setting_api")
+        self.login_url = self.reverse("user_login_api")
+        self.username = "2020222000"
+        self.password = "test123"
+
+    def test_change_major_success(self):
+        self.create_user(self.username, self.password)
+        data = {"major": "software"}
+        resp = self.client.put(self.url, data=data)
+        self.assertSuccess(resp)
+        data = resp.data["data"]
+        self.assertEqual(data["major"], "software")
+
+    def test_get_user_information_without_user(self):
+        self.create_user(self.username, self.password)
+        data = {"username": "19980331"}
+        resp = self.client.get(self.url, data)
+        self.assertDictEqual(resp.data, {"error": "error", "data": "User does not exist"})
+
+    def test_get_user_information(self):
+        self.create_user(self.username, self.password)
+        resp = self.client.get(self.url)
+        self.assertSuccess(resp)
+
+    def test_get_user_information_with_username(self):
+        self.create_user(self.username, self.password)
+        data = {"username": "2020222000"}
+        resp = self.client.get(self.url, data)
+        self.assertSuccess(resp)
+
+    def test_user_setting_without_authentication(self):
+        resp = self.client.get(self.url)
+        self.assertSuccess(resp)
+
+
+class UserLogoutAPITest(APITestCase):
+    def setUp(self):
+        self.username = self.password = "2020222000"
+        self.user = self.create_user(username=self.username, password=self.password, login=True)
+        self.url = self.reverse("user_logout_api")
+
+    def test_logout(self):
+        resp = self.client.get(self.url)
+        self.assertSuccess(resp)
+
+
+class EmailAuthAPITest(APITestCase):
+    def setUp(self):
+        self.username = self.password = "2020222000"
+        self.user = self.create_user(username=self.username, password=self.password, login=True)
+        self.url = self.reverse("email_auth_api")
+        self.user.email_auth_token = "testtoken"
+        self.user.save()
+
+    def test_email_auth_success(self):
+        resp = self.client.post(self.url, data={"token": "testtoken"})
+        self.assertSuccess(resp)
+
+    def test_email_auth_fail(self):
+        resp = self.client.post(self.url, data={"token": "failtoken"})
+        self.assertDictEqual(resp.data, {"error": "error", "data": "Token does not exist"})

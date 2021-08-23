@@ -180,21 +180,28 @@ class ProblemAdminAPITest(APITestCase):
 class ProblemAPITest(ProblemCreateTestBase):
     def setUp(self):
         self.url = self.reverse("problem_api")
-        admin = self.create_admin(login=False)
-        self.problem = self.add_problem(DEFAULT_PROBLEM_DATA, admin)
-        self.create_user("test", "test123")
+        self.admin = self.create_admin(login=False)
+        self.problem = self.add_problem(DEFAULT_PROBLEM_DATA, self.admin)
 
     def test_get_problem_list(self):
+        self.create_user("test", "test123")
         resp = self.client.get(f"{self.url}?limit=10")
         self.assertSuccess(resp)
 
     def get_one_problem(self):
-        resp = self.client.get(self.url + "?id=" + self.problem._id, data={"problem_id": "A-110"})
+        self.create_user("test", "test123")
+        resp = self.client.get(self.url + "?id=" + self.problem._id)
         self.assertSuccess(resp)
-        self.problem["rule_type"] = "OI"
-        self.problem.save()
-        resp = self.client.get(self.url + "?id=" + self.problem._id, data={"problem_id": "A-110"})
-        self.assertSuccess(resp)
+
+    def test_get_problem_list_without_permission(self):
+        self.user = self.create_user(username="testuser", password="19980331", login=True)
+        resp = self.client.get(self.url + "?id=" + self.problem._id)
+        self.assertFailed(resp)
+
+    def test_get_problem_list_without_problem_permission(self):
+        self.admin.problem_permission = "None"
+        resp = self.client.get(self.url + "?id=" + self.problem._id)
+        self.assertFailed(resp)
 
 
 class ContestProblemAdminTest(APITestCase):
