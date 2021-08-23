@@ -120,6 +120,9 @@ def check_contest_permission(check_type="details"):
             if user.is_contest_admin(self.contest):
                 return func(*args, **kwargs)
 
+            if user.school not in self.contest.allowed_school:
+                return self.error("You are not participant for this contest")
+
             if self.contest.contest_type == ContestType.PASSWORD_PROTECTED_CONTEST:
                 # password error
                 if not check_contest_password(request.session.get(CONTEST_PASSWORD_SESSION_KEY, {}).get(self.contest.id), self.contest.password):
