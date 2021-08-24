@@ -318,6 +318,50 @@ export default {
     return ajax('admin/upload_file', 'post', {
       data
     })
+  },
+  getAssignmentList (courseId, assignmentId, limit, offset) {
+    const params = { course_id: courseId, assignment_id: assignmentId, limit, offset }
+    return ajax('/lecture/professor/course/assignment', 'get', {
+      params: params
+    })
+  },
+  createAssignment (data) {
+    return ajax('/lecture/professor/course/assignment', 'post', {
+      data
+    })
+  },
+  editAssignment (data) {
+    return ajax('/lecture/professor/course/assignment', 'put', {
+      data
+    })
+  },
+  deleteAssignment (courseId, assignmentId) {
+    const params = { course_id: courseId, assignment_id: assignmentId }
+    return ajax('/lecture/professor/course/assignment', 'delete', {
+      params: params
+    })
+  },
+  getAssignmentProblemList (problemId, assignmentId) {
+    const params = { problem_id: problemId, assignment_id: assignmentId }
+    return ajax('/lecture/profressor/course/assignment/problem', 'get', {
+      params: params
+    })
+  },
+  createAssignmentProblem (data) {
+    return ajax('/lecture/profressor/course/assignment/problem', 'post', {
+      data
+    })
+  },
+  editAssignmentProblem (data) {
+    return ajax('/lecture/profressor/course/assignment/problem', 'put', {
+      data
+    })
+  },
+  deleteAssignmenProblem (id) {
+    const params = { id: id }
+    return ajax('/lecture/profressor/course/assignment/problem', 'delete', {
+      params: params
+    })
   }
 }
 
