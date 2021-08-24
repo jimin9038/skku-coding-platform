@@ -43,9 +43,10 @@
                   </div>
                 </template>
               </b-table>
-              <b-button size="sm" variant="warning" class="mr-2">
+              <b-button size="sm" variant="warning" class="mr-2" v-b-modal.importProblem>
                 +problem<br>From SKKU coding platform
               </b-button>
+              <import-public-problem-modal></import-public-problem-modal>
               <b-button size="sm" variant="primary" class="mr-2">
                 +problem<br>Create a new problem
               </b-button>
@@ -106,11 +107,13 @@
 
 <script>
 import CreateAssignmentModal from './CreateAssignment.vue'
+import ImportPublicProblemModal from './ImportPublicProblem.vue'
 
 export default {
   name: 'AssignmentList',
   components: {
-    CreateAssignmentModal
+    CreateAssignmentModal,
+    ImportPublicProblemModal
   },
   data () {
     return {

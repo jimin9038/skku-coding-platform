@@ -27,11 +27,16 @@
         id="input-group-assignment-content"
         label="Assignment Content"
         label-for="input-assignment-content"
+        required
+        :state="form.content !== ''"
+        invalid-feedback="Content is required"
       >
         <b-form-input
           id="input-assignment-content"
           v-model="form.assignmentContent"
           placeholder="Enter Content"
+          required
+          :state="form.content !== ''"
         ></b-form-input>
       </b-form-group>
       <b-row>
