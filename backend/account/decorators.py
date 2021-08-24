@@ -123,6 +123,13 @@ def check_contest_permission(check_type="details"):
             if user.school not in self.contest.allowed_school:
                 return self.error("You are not participant for this contest")
 
+            lecture_flag = False
+            for user_lecture in user.applied_lecture:
+                if user_lecture in self.contest.allowed_lecture:
+                    lecture_flag = True
+            if not lecture_flag:
+                return self.error("You are not participant for this contest")
+
             if self.contest.contest_type == ContestType.PASSWORD_PROTECTED_CONTEST:
                 # password error
                 if not check_contest_password(request.session.get(CONTEST_PASSWORD_SESSION_KEY, {}).get(self.contest.id), self.contest.password):

@@ -35,10 +35,16 @@ class SubmissionAPI(APIView):
         if not request.user.is_contest_admin(contest):
             user_ip = ipaddress.ip_address(request.session.get("ip"))
             user_school = request.user.school
+            lecture_flag = False
             if contest.allowed_ip_ranges:
                 if not any(user_ip in ipaddress.ip_network(cidr, strict=False) for cidr in contest.allowed_ip_ranges):
                     return self.error("Your IP is not allowed in this contest")
             if user_school not in contest.allowed_school:
+                return self.error("You are not participant for this contest")
+            for user_lecture in request.user.applied_lecture:
+                if user_lecture in self.contest.allowed_lecture:
+                    lecture_flag = True
+            if not lecture_flag:
                 return self.error("You are not participant for this contest")
 
     @swagger_auto_schema(request_body=CreateSubmissionSerializer)

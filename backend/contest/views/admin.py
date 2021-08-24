@@ -10,6 +10,7 @@ from drf_yasg import openapi
 
 from account.decorators import ensure_created_by
 from account.models import User
+from account.views.emails import emails
 from submission.models import Submission, JudgeStatus
 from utils.api import APIView, validate_serializer
 from utils.cache import cache
@@ -38,6 +39,9 @@ class ContestAPI(APIView):
             return self.error("Start time must occur earlier than end time")
         if data.get("password") and data["password"] == "":
             data["password"] = None
+        for school in data["allowed_school"]:
+            if school not in emails.keys:
+                return self.error(f"{school} is not a valid school name")
         for ip_range in data["allowed_ip_ranges"]:
             try:
                 ip_network(ip_range, strict=False)
@@ -65,6 +69,9 @@ class ContestAPI(APIView):
             return self.error("Start time must occur earlier than end time")
         if not data["password"]:
             data["password"] = None
+        for school in data["allowed_school"]:
+            if school not in emails.keys:
+                return self.error(f"{school} is not a valid school")
         for ip_range in data["allowed_ip_ranges"]:
             try:
                 ip_network(ip_range, strict=False)

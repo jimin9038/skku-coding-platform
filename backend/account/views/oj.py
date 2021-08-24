@@ -216,13 +216,14 @@ class UserRegisterAPI(APIView):
             return self.error("Invalid captcha")
         if User.objects.filter(username=data["username"]).exists():
             return self.error("Username already exists")
-        if not re.match(r"^20[0-9]{8}$", data["username"]):
-            return self.error("Not student ID")
+        if data["email"].split("@")[1] in ["g.skku.edu", "skku.edu"]:
+            if not re.match(r"^20[0-9]{8}$", data["username"]):
+                return self.error("Not student ID")
         if User.objects.filter(email=data["email"]).exists():
             return self.error("Email already exists")
         if data["email"].split("@")[1] not in emails.keys:
             return self.error("Invalid domain (Use Proper School Email)")
-        user = User.objects.create(username=data["username"], email=data["email"], major=data["major"], school=emails[data["email"]])
+        user = User.objects.create(username=data["username"], email=data["email"], major=data["major"], school=emails[data["email"].split("@")[1]])
         user.set_password(data["password"])
         user.has_email_auth = False
         user.email_auth_token = rand_str()
@@ -281,7 +282,7 @@ class UserChangeEmailAPI(APIView):
         if data["new_email"].split("@")[1] not in emails.keys:
             return self.error("Invalid domain (Use Proper School Email)")
         user.email = data["new_email"]
-        user.school = emails[data["new_email"]]
+        user.school = emails[data["new_email"].split("@")[1]]
         user.save()
         return self.success("Succeeded")
 

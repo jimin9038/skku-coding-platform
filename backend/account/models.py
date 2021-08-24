@@ -30,6 +30,7 @@ class User(AbstractBaseUser):
     major = models.TextField(null=True)
     create_time = models.DateTimeField(auto_now_add=True, null=True)
     session_keys = JSONField(default=list)
+    applied_lecture = JSONField(default=list)
     is_disabled = models.BooleanField(default=False)
     has_email_auth = models.BooleanField(default=True)
     email_auth_token = models.TextField(null=True)
