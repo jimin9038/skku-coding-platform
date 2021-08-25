@@ -27,6 +27,7 @@ class User(AbstractBaseUser):
     username = models.TextField(unique=True)
     email = models.TextField(null=True)
     major = models.TextField(null=True)
+    school = models.TextField(null=True)
     create_time = models.DateTimeField(auto_now_add=True, null=True)
     session_keys = JSONField(default=list)
     is_disabled = models.BooleanField(default=False)

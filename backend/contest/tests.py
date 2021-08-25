@@ -13,6 +13,8 @@ DEFAULT_CONTEST_DATA = {"title": "test title", "description": "test description"
                         "rule_type": ContestRuleType.ACM,
                         "password": "123",
                         "allowed_ip_ranges": [],
+                        "allowed_school": [],
+                        "allowed_lecture": [],
                         "visible": True, "real_time_rank": True}
 
 

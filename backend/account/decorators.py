@@ -107,7 +107,6 @@ def check_contest_permission(check_type="details"):
                 contest_id = request.GET.get("contest_id")
             if not contest_id:
                 return self.error("Parameter error, contest_id is required")
-
             try:
                 # use self.contest to avoid query contest again in view.
                 self.contest = Contest.objects.select_related("created_by").get(id=contest_id, visible=True)
@@ -121,6 +120,10 @@ def check_contest_permission(check_type="details"):
             # creator or owner
             if user.is_contest_admin(self.contest):
                 return func(*args, **kwargs)
+
+            if self.contest.allowed_school:
+                if user.school not in self.contest.allowed_school:
+                    return self.error("You are not participant for this contest")
 
             if self.contest.contest_type == ContestType.PASSWORD_PROTECTED_CONTEST:
                 # password error

@@ -16,6 +16,7 @@ from options.options import SysOptions
 from utils.api import APIView, validate_serializer
 from utils.captcha import Captcha
 from utils.shortcuts import rand_str
+from account.views.emails import emails
 from ..decorators import login_required
 from ..models import User, UserProfile
 from ..serializers import (ApplyResetPasswordSerializer, ResetPasswordSerializer,
@@ -192,7 +193,7 @@ class UsernameOrEmailCheck(APIView):
         if data.get("email"):
             if User.objects.filter(email=data["email"].lower()).exists():
                 result["email"] = 1
-            elif data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu"):
+            elif data["email"].split("@")[1] not in emails.keys():
                 result["email"] = 2
         return self.success(result)
 
@@ -215,13 +216,14 @@ class UserRegisterAPI(APIView):
             return self.error("Invalid captcha")
         if User.objects.filter(username=data["username"]).exists():
             return self.error("Username already exists")
-        if not re.match(r"^20[0-9]{8}$", data["username"]):
-            return self.error("Not student ID")
+        if data["email"].split("@")[1] in ["g.skku.edu", "skku.edu"]:
+            if not re.match(r"^20[0-9]{8}$", data["username"]):
+                return self.error("Not student ID")
         if User.objects.filter(email=data["email"]).exists():
             return self.error("Email already exists")
-        if data["email"].split("@")[1] not in ("g.skku.edu", "skku.edu"):
-            return self.error("Invalid domain (Use skku.edu or g.skku.edu)")
-        user = User.objects.create(username=data["username"], email=data["email"], major=data["major"])
+        if data["email"].split("@")[1] not in emails.keys():
+            return self.error("Invalid domain (Use Proper School Email)")
+        user = User.objects.create(username=data["username"], email=data["email"], major=data["major"], school=emails[data["email"].split("@")[1]])
         user.set_password(data["password"])
         user.has_email_auth = False
         user.email_auth_token = rand_str()
@@ -277,9 +279,10 @@ class UserChangeEmailAPI(APIView):
         data["new_email"] = data["new_email"].lower()
         if User.objects.filter(email=data["new_email"]).exists():
             return self.error("The email is owned by other account")
-        if data["new_email"].split("@")[1] not in ("g.skku.edu", "skku.edu"):
-            return self.error("Invalid domain (Use skku.edu or g.skku.edu)")
+        if data["new_email"].split("@")[1] not in emails.keys():
+            return self.error("Invalid domain (Use Proper School Email)")
         user.email = data["new_email"]
+        user.school = emails[data["new_email"].split("@")[1]]
         user.save()
         return self.success("Succeeded")
 

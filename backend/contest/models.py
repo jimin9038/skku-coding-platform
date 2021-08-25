@@ -24,6 +24,8 @@ class Contest(models.Model):
     # If it is visible, false is equivalent to delete
     visible = models.BooleanField(default=True)
     allowed_ip_ranges = JSONField(default=list)
+    allowed_school = JSONField(default=list)
+    allowed_lecture = JSONField(default=list)
 
     @property
     def status(self):

@@ -6,6 +6,7 @@ from drf_yasg import openapi
 from account.decorators import admin_role_required, login_required, check_contest_permission, check_assignment_permission
 from assignment.models import Assignment
 from contest.models import ContestStatus, ContestRuleType
+from course.models import Registration
 from judge.tasks import judge_task
 from options.options import SysOptions
 # from judge.dispatcher import JudgeDispatcher
@@ -36,9 +37,22 @@ class SubmissionAPI(APIView):
             return self.error("The contest have ended")
         if not request.user.is_contest_admin(contest):
             user_ip = ipaddress.ip_address(request.session.get("ip"))
+            user_school = request.user.school
+            user_id = request.user.id
             if contest.allowed_ip_ranges:
                 if not any(user_ip in ipaddress.ip_network(cidr, strict=False) for cidr in contest.allowed_ip_ranges):
                     return self.error("Your IP is not allowed in this contest")
+            courses = Registration.objects.get(user_id=user_id)
+            flag = False
+            if contest.allowed_lecture.length() > 0:
+                for course in courses:
+                    if course in contest.allowed_lecture:
+                        flag = True
+                if not flag:
+                    return self.error("You are not participant for this contest")
+            if contest.allowed_school.length() > 0:
+                if user_school not in contest.allowed_school:
+                    return self.error("You are not participant for this contest")
 
     @check_assignment_permission()
     def check_assignment_permission(self, request):
