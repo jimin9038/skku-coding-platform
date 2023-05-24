@@ -38,7 +38,7 @@ pytz==2020.5
 PyYAML==5.4.1
 raven==6.10.0
 redis==3.5.3
-requests==2.25.1
+requests==2.31.0
 ruamel.yaml==0.16.12
 ruamel.yaml.clib==0.2.2
 six==1.15.0
